@@ -23,9 +23,10 @@ def parseRawData(author = None, constrain = None):
         return r
 
     def handleJson(file):
-        # print file
+        # print(file)
         rst = []
-        data = json.loads(open(file).read())
+        f = open(file, encoding='utf-8')
+        data = json.load(f)
         for poetry in data:
             pdata = ""
             if (author!=None and poetry.get("author")!=author):
@@ -33,7 +34,7 @@ def parseRawData(author = None, constrain = None):
             p = poetry.get("paragraphs")
             flag = False
             for s in p:
-                sp = re.split("[，！。]".decode("utf-8"), s)
+                sp = re.split("[，！。]", s)
                 for tr in sp:
                     if constrain != None and len(tr) != constrain and len(tr)!=0:
                         flag = True
@@ -48,16 +49,12 @@ def parseRawData(author = None, constrain = None):
             if pdata!="":
                 rst.append(pdata)
         return rst
-    # print sentenceParse("")
+    
+    # print(sentenceParse(""))
     data = []
     src = './chinese-poetry/json/'
     for filename in os.listdir(src):
         if filename.startswith("poet.tang"):
             data.extend(handleJson(src+filename))
     return data
-
-
-
-if __name__=='__main__':
-    print parseRawData.sentenceParse("熱暖將來賓鐵文，暫時不動聚白雲。撥卻白雲見青天，掇頭裏許便乘仙。（見影宋蜀刻本《李太白文集》卷二十三。）（以上繆氏本《太白集》）-362-。")
 
