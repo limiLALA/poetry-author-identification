@@ -54,11 +54,13 @@ cat_dir = os.path.join(base_dir, 'little_categories.txt')
 
 
 def train():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     x_train, y_train = process_file(train_dir, word_to_id, cat_to_id, 600)  # 获取训练数据每个字的id和对应标签的oe-hot形式
     x_val, y_val = process_file(val_dir, word_to_id, cat_to_id, 600)
     # 使用LSTM或者CNN
     # model = TextRNN(len(word_to_id), len(cat_to_id))
     model = TextCNN(len(word_to_id), len(cat_to_id))
+    model = model.to(device)
     # 选择损失函数
     # Loss = nn.MultiLabelSoftMarginLoss()
     # Loss = nn.BCELoss()
@@ -71,8 +73,8 @@ def train():
         for x_batch, y_batch in batch_train:
             x = x_batch
             y = y_batch
-            x = torch.LongTensor(x)
-            y = torch.Tensor(y)
+            x = torch.LongTensor(x).to(device)
+            y = torch.Tensor(y).to(device)
             # y = torch.LongTensor(y)
             x = Variable(x)
             y = Variable(y)
