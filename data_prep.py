@@ -120,7 +120,8 @@ f.close()
 # vocab_dir = 'data/vocab.txt'
 # save_vocab(vocab_dir)
 
-vocab = set(vocab_list)
+vocab_list = list(set(vocab_list))
+vocab_list = [vocab_list[i]+'\t'+str(i) for i in range(len(vocab_list))]
 f = codecs.open('data/little_vocab.txt', 'w', 'utf-8')
-f.write('\n'.join(vocab))
+f.write('\n'.join(vocab_list))
 f.close()

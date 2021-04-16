@@ -7,6 +7,8 @@ import numpy as np
 from torch.autograd import Variable
 import torch.nn.functional as F
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 class TextRNN(nn.Module):
     """文本分类，RNN模型"""
@@ -43,9 +45,9 @@ class TextCNN(nn.Module):
 
     def forward(self, x):
         x = self.embedding(x)
-        x = x.detach().numpy()
+        x = x.detach().cpu().numpy()
         x = np.transpose(x, [0, 2, 1])
-        x = torch.Tensor(x)
+        x = torch.Tensor(x).to(device)
         x = Variable(x)
         x = self.conv(x)
         x = x.view(-1, 256 * 596)
