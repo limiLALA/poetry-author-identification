@@ -58,8 +58,8 @@ def train():
     x_train, y_train = process_file(train_dir, word_to_id, cat_to_id, 600)  # 获取训练数据每个字的id和对应标签的oe-hot形式
     x_val, y_val = process_file(val_dir, word_to_id, cat_to_id, 600)
     # 使用LSTM或者CNN
-    # model = TextRNN(len(word_to_id), len(cat_to_id))
-    model = TextCNN(len(word_to_id), len(cat_to_id))
+    model = TextRNN(len(word_to_id), len(cat_to_id))
+    # model = TextCNN(len(word_to_id), len(cat_to_id))
     model = model.to(device)
     # 选择损失函数
     # Loss = nn.MultiLabelSoftMarginLoss()
