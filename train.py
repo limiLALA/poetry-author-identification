@@ -22,7 +22,7 @@ base_dir = 'data'
 train_dir = os.path.join(base_dir, 'little_train_wordcut.txt')
 test_dir = os.path.join(base_dir, 'little_test_wordcut.txt')
 val_dir = os.path.join(base_dir, 'little_val_wordcut.txt')
-vocab_dir = os.path.join(base_dir, 'vocab.txt')
+vocab_dir = os.path.join(base_dir, 'little_vocab.txt')
 cat_dir = os.path.join(base_dir, 'little_categories.txt')
 
 
