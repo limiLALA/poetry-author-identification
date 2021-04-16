@@ -83,7 +83,7 @@ def train():
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            accracy = np.mean((torch.argmax(out, 1) == torch.argmax(y, 1)).numpy())
+            # accracy = np.mean((torch.argmax(out, 1) == torch.argmax(y, 1)).numpy())
         # 对模型进行验证
         if (epoch + 1) % 20 == 0:
             batch_val = batch_iter(x_val, y_val, 100)
@@ -100,7 +100,7 @@ def train():
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                accracy = np.mean((torch.argmax(out, 1) == torch.argmax(y, 1)).numpy())
+                accracy = np.mean((torch.argmax(out, 1) == torch.argmax(y, 1)).cpu().numpy())
                 if accracy > best_val_acc:
                     torch.save(model.state_dict(), 'model_params.pkl')
                     best_val_acc = accracy
