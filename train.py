@@ -1,120 +1,115 @@
-# coding:utf-8
-# import random
-# import torch.nn as nn
-# import torch.optim as optim
-import dataHandler
-# from model import PoetryModel
-# from utils import *
-# import cPickle as p
-import re
-import jieba
-from collections import Counter
+# coding: utf-8
 
-# 生成基于诗词语料的字向量和词向量
-data = dataHandler.parseRawData()  # All if author=None
-# print(type(data))
-seg_list = []  # 切分好的字向量和词向量
-sentences = ''
-sentences_list = []
-paragraphs_list = []
-for p in data:
-    text_list = re.findall(r'[\u4e00-\u9fff]+', p)  # 找到所有汉字
-    for text in text_list:
-        # 将单句进行分词，用一个空格分隔
-        sentence = ' '.join(jieba.lcut(text, cut_all=True))
-        sentences_list.append(sentence)
-    sentences = '   '.join(sentences_list)  # 一首诗的预处理结果
-    paragraphs_list.append(sentences)
-paragraphs = '    \n'.join(paragraphs_list)
-f = open('./data/all.txt','w')
-f.write(paragraphs)
-f.close()
+from __future__ import print_function
 
-# 统计各个字向量和词向量出现的次数
-# word_dic = Counter(seg_list)
-# word_dic = sorted(word_dic.items(), key=lambda item:item[1], reverse=True)  # 倒序
-# # print("word_dic={}, len={}".format(word_dic, len(word_dic)))
-# new_word_dic = {k:v for k,v in word_dic if v>10}
-# print("new_word_dic={}, len={}".format(new_word_dic, len(new_word_dic)))
+import codecs
 
-# CBOW模型生成词向量
+import torch
+from torch import nn
+from torch import optim
+from torch.autograd import Variable
+import os
+
+import numpy as np
+
+from model import TextRNN, TextCNN
+from cnews_loader import read_vocab, read_category, batch_iter, process_file, build_vocab, read_file
+
+base_dir = 'data'
+# train_dir = os.path.join(base_dir, 'train_wordcut.txt')
+# test_dir = os.path.join(base_dir, 'test_wordcut.txt')
+# val_dir = os.path.join(base_dir, 'val_wordcut.txt')
+train_dir = os.path.join(base_dir, 'little_train_wordcut.txt')
+test_dir = os.path.join(base_dir, 'little_test_wordcut.txt')
+val_dir = os.path.join(base_dir, 'little_val_wordcut.txt')
+vocab_dir = os.path.join(base_dir, 'vocab.txt')
+cat_dir = os.path.join(base_dir, 'little_categories.txt')
 
 
+# 挑选小数据量进行本地测试
+# def save_little_data():
+#     max_size = 10000
+#     labels, contents = read_file('data/little_train_wordcut.txt')
+#     f = codecs.open('data/little_train_wordcut.txt', 'w', 'utf-8')
+#     f.write('\n'.join(train_wordcut_list))
+#     f.close()
+#
+#     # 将分词后的训练集、评估集和测试集保存在本地
+#
+#     f = codecs.open('data/little_val_wordcut.txt', 'w', 'utf-8')
+#     f.write('\n'.join(val_wordcut_list))
+#     f.close()
+#     f = codecs.open('data/little_test_wordcut.txt', 'w', 'utf-8')
+#     f.write('\n'.join(test_wordcut_list))
+#     f.close()
+#     # 生成作者名到id的字典并保存到本地
+#     cat_to_id = dict(zip(categories, range(len(categories))))
+#     f = codecs.open('data/little_categories.txt', 'w', 'utf-8')
+#     for k, v in cat_to_id.items():
+#         f.write(k + '\t' + str(v) + '\n')
+#     f.close()
+#     # 生成词向量
+#     vocab_dir = 'data/little_vocab.txt'
+#     save_vocab(vocab_dir)
 
 
+def train():
+    x_train, y_train = process_file(train_dir, word_to_id, cat_to_id, 600)  # 获取训练数据每个字的id和对应标签的oe-hot形式
+    x_val, y_val = process_file(val_dir, word_to_id, cat_to_id, 600)
+    # 使用LSTM或者CNN
+    # model = TextRNN(len(word_to_id), len(cat_to_id))
+    model = TextCNN(len(word_to_id), len(cat_to_id))
+    # 选择损失函数
+    # Loss = nn.MultiLabelSoftMarginLoss()
+    # Loss = nn.BCELoss()
+    Loss = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    best_val_acc = 0
+    num_epochs = int(len(y_train) / 100) + 1
+    for epoch in range(num_epochs):
+        batch_train = batch_iter(x_train, y_train, 100)
+        for x_batch, y_batch in batch_train:
+            x = x_batch
+            y = y_batch
+            x = torch.LongTensor(x)
+            y = torch.Tensor(y)
+            # y = torch.LongTensor(y)
+            x = Variable(x)
+            y = Variable(y)
+            out = model(x)
+            loss = Loss(out, y)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            accracy = np.mean((torch.argmax(out, 1) == torch.argmax(y, 1)).numpy())
+        # 对模型进行验证
+        if (epoch + 1) % 20 == 0:
+            batch_val = batch_iter(x_val, y_val, 100)
+            for x_batch, y_batch in batch_val:
+                x = np.array(x_batch)
+                y = np.array(y_batch)
+                x = torch.LongTensor(x)
+                y = torch.Tensor(y)
+                # y = torch.LongTensor(y)
+                x = Variable(x)
+                y = Variable(y)
+                out = model(x)
+                loss = Loss(out, y)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                accracy = np.mean((torch.argmax(out, 1) == torch.argmax(y, 1)).numpy())
+                if accracy > best_val_acc:
+                    torch.save(model.state_dict(), 'model_params.pkl')
+                    best_val_acc = accracy
+                print(accracy)
 
-# data = dataHandler.parseRawData(author="李白",constrain=5)  # All if author=None
-# random.shuffle(data)
-# for s in data:
-    # print(s)
-# word_to_ix = {}
-'''
-for sent in data:
-    for word in sent:
-        if word not in word_to_ix:
-            word_to_ix[word] = len(word_to_ix)
-word_to_ix['<EOP>'] = len(word_to_ix)
-word_to_ix['<START>'] = len(word_to_ix)
 
-VOCAB_SIZE = len(word_to_ix)
-
-print "VOCAB_SIZE:", VOCAB_SIZE
-print "data_size", len(data)
-
-for i in range(len(data)):
-    data[i] = toList(data[i])
-    data[i].append("<EOP>")
-# save the word dic for sample method
-p.dump(word_to_ix, file('wordDic', 'w'))
-
-# save all avaible word
-# wordList = open('wordList','w')
-# for w in word_to_ix:
-#     wordList.write(w.encode('utf-8'))
-# wordList.close()
-
-model = PoetryModel(len(word_to_ix), 256, 256);
-model.cuda()  # running on GPU,if you want to run it on CPU,delete all .cuda() usage.
-optimizer = optim.RMSprop(model.parameters(), lr=0.01, weight_decay=0.0001)
-criterion = nn.NLLLoss()
-
-one_hot_var_target = {}
-for w in word_to_ix:
-    one_hot_var_target.setdefault(w, make_one_hot_vec_target(w, word_to_ix))
-
-epochNum = 10
-TRAINSIZE = len(data)
-batch = 100
-def test():
-    v = int(TRAINSIZE / batch)
-    loss = 0
-    counts = 0
-    for case in range(v * batch, min((v + 1) * batch, TRAINSIZE)):
-        s = data[case]
-        hidden = model.initHidden()
-        t, o = makeForOneCase(s, one_hot_var_target)
-        output, hidden = model(t.cuda(), hidden)
-        loss += criterion(output, o.cuda())
-        counts += 1
-    loss = loss / counts
-    print "=====",loss.data[0]
-print "start training"
-for epoch in range(epochNum):
-    for batchIndex in range(int(TRAINSIZE / batch)):
-        model.zero_grad()
-        loss = 0
-        counts = 0
-        for case in range(batchIndex * batch, min((batchIndex + 1) * batch, TRAINSIZE)):
-            s = data[case]
-            hidden = model.initHidden()
-            t, o = makeForOneCase(s, one_hot_var_target)
-            output, hidden = model(t.cuda(), hidden)
-            loss += criterion(output, o.cuda())
-            counts += 1
-        loss = loss / counts
-        loss.backward()
-        print epoch, loss.data[0]
-        optimizer.step()
-    test()
-torch.save(model, 'poetry-gen.pt')
-'''
+if __name__ == '__main__':
+    # 获取文本的类别及其对应id的字典
+    categories, cat_to_id = read_category(cat_dir)
+    # 获取训练文本中所有出现过的字及其所对应的id
+    words, word_to_id = read_vocab(vocab_dir)
+    # 获取字数
+    vocab_size = len(words)
+    train()
