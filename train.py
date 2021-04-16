@@ -67,7 +67,7 @@ def train():
     Loss = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     best_val_acc = 0
-    num_epochs = int(len(y_train) / 100) + 1
+    num_epochs = int(len(y_train) / 100)
     for epoch in range(num_epochs):
         batch_train = batch_iter(x_train, y_train, 100)
         for x_batch, y_batch in batch_train:
@@ -88,10 +88,10 @@ def train():
         if (epoch + 1) % 20 == 0:
             batch_val = batch_iter(x_val, y_val, 100)
             for x_batch, y_batch in batch_val:
-                x = np.array(x_batch)
-                y = np.array(y_batch)
-                x = torch.LongTensor(x)
-                y = torch.Tensor(y)
+                x = x_batch
+                y = y_batch
+                x = torch.LongTensor(x).to(device)
+                y = torch.Tensor(y).to(device)
                 # y = torch.LongTensor(y)
                 x = Variable(x)
                 y = Variable(y)
@@ -104,7 +104,7 @@ def train():
                 if accracy > best_val_acc:
                     torch.save(model.state_dict(), 'model_params.pkl')
                     best_val_acc = accracy
-                print(accracy)
+                print('epoch=', epoch, 'accracy=', accracy)
 
 
 if __name__ == '__main__':
